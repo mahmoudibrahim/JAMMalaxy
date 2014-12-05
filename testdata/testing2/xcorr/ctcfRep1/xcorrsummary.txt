@@ -1,5 +1,0 @@
-Number of chromosomes used:1
-Average strand shift:180
-Standard Deviation:180
-Mode:180
-Fragment Length:180
