@@ -1,0 +1,1 @@
+bash JAMM.sh -s testdata -g chrSizes21.csize -o testdata/results

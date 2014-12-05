@@ -1,0 +1,6 @@
+===================
+Version 1.0.6rev2
+===================
+
+- fixed various bugs in v1.0.6rev1 that caused paired-end runs to malfunction.
+

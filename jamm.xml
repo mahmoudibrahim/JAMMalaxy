@@ -1,0 +1,61 @@
+<tool id="jamm1.06rev2" name="JAMM" version="1.0.6.2">
+<description>Calls peaks on NGS data</description>
+<requirements>
+<!--
+	<requirement type="package" version="2.5">b2g4pipe</requirement>
+-->
+</requirements>
+<command interpreter="python">
+jammwrapper.py -i
+	#for $i in $replicate
+	${i.input}
+	#end for
+	-g ${genomeSizeFile}
+	-z $output
+</command>
+
+<stdio>
+<!-- Wrapper ensures anything other than zero is an error -->
+<exit_code range="1:" />
+<exit_code range=":-1" />
+</stdio>
+
+<inputs>
+	<repeat name="replicate" title="Replicate">
+		<param name="input" type="data" format="bed">
+		</param>
+	</repeat>
+	<param name="genomeSizeFile" type="data" label="File indicating chromosome sizes" description="">
+	</param>
+</inputs>
+
+<outputs>
+<data name="output" format="tabular" label="Narrowpeak tabular" />
+</outputs>
+<!--
+<tests>
+<test>
+<param name="xml" value="blastp_sample.xml" ftype="blastxml"/>
+<param name="prop" value="Spain_2011_June"/>
+<output name="tab" file="blastp_sample.blast2go.tabular" ftype="tabular"/>
+</test>
+</tests>
+-->
+<help>
+.. class:: infomark
+
+This tool requires files in *bed* format.
+
+----
+
+**What it does**
+JAMM calls peaks on NGS data, i.e. for finding binding sites.
+
+If you use it, please cite
+
+ JAMM: A Peak Finder for Joint Analysis of NGS Replicates.
+ 
+ Mahmoud M Ibrahim, Scott A Lacadie, Uwe Ohler 
+
+</help>
+</tool>
