@@ -8,6 +8,7 @@
 # call JAMM.sh
 # maybe map the resulting tabular files back to history items, the XML could take care of that if output is fixed
 
+#import optparse
 import argparse, os, shutil, subprocess, sys, tempfile
 import shlex
 # importing some of the modules used, especially for symlinking, dir manipulation and tool calling.

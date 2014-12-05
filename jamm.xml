@@ -1,4 +1,4 @@
-<tool id="jamm1.06rev2" name="JAMM" version="1.0.6.2">
+<tool id="jamm1.0.6rev2" name="JAMM" version="1.0.6.2">
 <description>Calls peaks on NGS data</description>
 <requirements>
 <!--
