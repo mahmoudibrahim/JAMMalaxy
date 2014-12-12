@@ -25,12 +25,6 @@ def main():
     parser.add_argument('-i', dest = 'input', nargs='+')
     parser.add_argument('-g', dest = 'gsize')
     parser.add_argument('-z', dest = 'peakfile')
-    
-    parser.add_argument('-m', dest = 'mode')
-    parser.add_argument('-r', dest = 'resolution')
-    parser.add_argument('-p', dest = 'processes')
-    #parser.add_argument('-b', dest = 'binSize')
-    
     args = parser.parse_args()
    
     print "\n"
@@ -62,8 +56,7 @@ def main():
         # ref_file.close()
         # os.symlink( file, ref_file_name )
     
-    command = ( "/home/cmesser/galaxy/tools/jamm/JAMM.sh -s %s -g %s -o results -m %s -r %s -p %s"
-     % ( tmp_dir, args.gsize, args.mode, args.resolution, args.processes ) ) 
+    command = "/home/cmesser/galaxy/tools/jamm/JAMM.sh -s %s  -g %s -o results" % ( tmp_dir, args.gsize ) 
     print command
     # depending on how your programm is called, it may be necessary to use shlex.split on the command string before
     # in this case, this was actually harmful. idk why
