@@ -12,7 +12,7 @@ sPath="`( cd \"$sPath\" && pwd )`"
 usage()
 {
 cat << EOF
-Welcome to JAMM v1.0.6rev2 Signal Generator Script (GNU GPLv3). Copyright (C) 2014  Mahmoud Ibrahim.
+Welcome to JAMM v1.0.6rev3 Signal Generator Script (GNU GPLv3). Copyright (C) 2014  Mahmoud Ibrahim.
 
 This program comes with ABSOLUTELY NO WARRANTY; for details visit http://www.gnu.org/licenses/gpl.html. This is free software, and you are welcome to redistribute it under certain conditions; visit http://www.gnu.org/licenses/gpl.html for details.
 
@@ -34,7 +34,11 @@ EOF
 # Process Input parameters
 # =========================
 
+#Defaults -- Change those if you want
+export LANG=C #locale defaults
+export LC_ALL=C #locale defaults
 
+#Defaults -- Do not change
 sdir=""
 gsize=""
 out=""

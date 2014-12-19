@@ -1,6 +1,7 @@
 ===================
-Version 1.0.6rev2
+Version 1.0.6rev3
 ===================
 
-- fixed various bugs in v1.0.6rev1 that caused paired-end runs to malfunction.
+- fixed bash localization bug for those with locales having "," as decimal point. Now the default locale is "C", set in the JAMM.sh and SignalGenerator.sh scripts.
+
 

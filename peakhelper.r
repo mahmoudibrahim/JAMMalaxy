@@ -38,20 +38,6 @@ options(stringsAsFactors = FALSE)
 
 
 
-
-# ============================================== 
-# Required Libraries check (Source: http://r.789695.n4.nabble.com/test-if-a-package-is-installed-td1750671.htm)
-# ============================================== 
-if ((is.element('sqldf', installed.packages()[,1]) == FALSE)) {
-	stop("R package 'sqldf' is required. Please install it!")
-}
-suppressPackageStartupMessages(library("sqldf"))
-suppressPackageStartupMessages(library("tcltk"))
-#=======================> DONE! 
-
-
-
-
 # ================= 
 # Custom Functions
 # =================
