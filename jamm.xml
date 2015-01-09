@@ -1,9 +1,8 @@
-<tool id="jamm1.0.6rev2" name="JAMM" version="1.0.6.2">
+<tool id="jamm" name="JAMM" version="1.0.6.3">
 <description>Calls peaks on NGS data</description>
 <requirements>
-<!--
-	<requirement type="package" version="2.5">b2g4pipe</requirement>
--->
+	<requirement>R</requirement>
+	<requirement>perl</requirement>
 </requirements>
 <command interpreter="python">
 jammwrapper.py -i
