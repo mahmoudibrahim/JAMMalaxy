@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 ########################################
 #### Peak finding Pipeline for NGS Data
 #### Bash script		
