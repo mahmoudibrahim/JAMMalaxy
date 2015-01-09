@@ -32,17 +32,23 @@ def main():
     #parser.add_argument('-b', dest = 'binSize')
     
     args = parser.parse_args()
-   
-    print "\n"
+    
+    print "################################################" 
     print "Wrapper debugging" 
+    print "################################################" 
     print "Files to be used:"
     for j in args.input:
         print j
 
     print "output file:"
     print args.peakfile
+    print "current working dir:"
+    print os.getcwd() 
+    print "dir with jammwrapper in it:"
+    path = os.path.abspath(os.path.dirname(sys.argv[0]))
+    print path
 
-    # depracted, can still be found in may of the example wrappers    
+    # optparse was depracted, can still be found in may of the example wrappers
     #parser = optparse.OptionParser()
     #parser.add_option( '-i',  dest='input', help='input bed files' )
     #parser.add_option( '-c',  dest='csize', help='chr sizes' )
@@ -50,7 +56,7 @@ def main():
    
     # create temp dir
     tmp_dir = tempfile.mkdtemp()
-    os.chdir(tmp_dir)
+    #os.chdir(tmp_dir)
     # symlink creation
     for file in args.input:
         filen =  tmp_dir + "/" + os.path.basename(os.path.splitext(file)[0])+".bed"
@@ -61,9 +67,11 @@ def main():
         # ref_file_name = ref_file.name
         # ref_file.close()
         # os.symlink( file, ref_file_name )
-    
-    command = ( "/home/cmesser/galaxy/tools/jamm/JAMM.sh -s %s -g %s -o results -m %s -r %s -p %s"
-     % ( tmp_dir, args.gsize, args.mode, args.resolution, args.processes ) ) 
+
+	    
+    #command = ( "/home/cmesser/jamm/JAMM.sh -s %s -g %s -o results -m %s -r %s -p %s"
+    command = ( "bash %s/JAMM.sh -s %s -g %s -o results -m %s -r %s -p %s"
+     % ( path, tmp_dir, args.gsize, args.mode, args.resolution, args.processes ) ) 
     print command
     # depending on how your programm is called, it may be necessary to use shlex.split on the command string before
     # in this case, this was actually harmful. idk why
@@ -75,7 +83,10 @@ def main():
     returncode = proc.wait()
     
     #mv files to a place where galaxy wrapper can find them
-    mvcommand = "mv %s/results/peaks/all.peaks.narrowPeak %s" % ( tmp_dir, args.peakfile ) 
+    # mvcommand = "mv %s/results/peaks/all.peaks.narrowPeak %s" % ( tmp_dir, args.peakfile )
+    mvcommand = "mv results/peaks/all.peaks.narrowPeak %s" % args.peakfile
+    
+    print mvcommand
     os.system(mvcommand)
 
 # clean up temp dir
