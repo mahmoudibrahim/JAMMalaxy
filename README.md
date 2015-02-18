@@ -10,7 +10,7 @@ JAMM is a universal peak finder that is applicable to different types of dataset
 Stand-alone version
 ===================
 
-The latest release of the stand-aline version can be found here:
+The latest release of the stand-alone version can be found here:
 http://code.google.com/p/jamm-peak-finder/
 
 (You can also use the stand-alone version from this repository, ignoring the 
