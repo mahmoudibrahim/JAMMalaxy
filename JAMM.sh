@@ -1,9 +1,22 @@
-#!/bin/bash
-########################################
-#### Peak finding Pipeline for NGS Data
-#### Bash script		
-########################################
-
+########################################################################
+# JAMMv1.0.7rev1 is a peak finder for joint analysis of NGS replicates.
+# Copyright (C) 2014-2015  Mahmoud Ibrahim
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Contact: mahmoud.ibrahim@mdc-berlin.de
+########################################################################
 
 
 ##Finding out the path
@@ -15,7 +28,7 @@ sPath="`( cd \"$sPath\" && pwd )`"
 usage()
 {
 cat << EOF
-Welcome to JAMM v1.0.6rev3 (GNU GPLv3). Copyright (C) 2014  Mahmoud Ibrahim.
+Welcome to JAMM v1.0.7rev1 (GNU GPLv3). Copyright (C) 2014-2015  Mahmoud Ibrahim.
 
 This program comes with ABSOLUTELY NO WARRANTY; for details visit http://www.gnu.org/licenses/gpl.html. This is free software, and you are welcome to redistribute it under certain conditions; visit http://www.gnu.org/licenses/gpl.html for details.
 
@@ -24,14 +37,17 @@ OPTIONS:
    -g      Genome size file (required)
    -o      Output directory (required)
    -c      directory containing input or Control files
-   -m      Mode, normal or narrow (default: normal)
-   -r      Resolution, peak or region (default: peak)
    -f      Fragment length(s) (default: estimated)
-   -w      minimum Window size (default: 2 --- Note: this means minimum_window_size = bin_size x the_value_of_-w)
-   -p	   Number of processors used by R scripts (default: 1)
+   -r      Resolution, peak or region or window (default: peak)
+   -m      Mode, normal or narrow (default: normal)
+   -i      clustering Initialization window selection, deterministic or stochastic (default: deterministic)
    -b	   Bin Size (default: estimated)
+   -w      minimum Window size (default: 2 --- Note: this means minimum_window_size = bin_size x the_value_of_-w)
+   -e	   window Enrichment cutoff, auto or any numeric value (default: 1 --- Set this to "auto" to estimate the window enrichment cutoff)
+   -d	   keep PCR Dupicates in single-end mode, y or n (default: n --- if -t is "paired", this option has no effect) 
    -t	   Type, single or paired (default: single, requires BED files. paired requires BEDPE files)
-   -e	   window Enrichment cutoff, auto or any numeric value (default: 1 --- Set this to auto to estimate the appropriate window enrichment cutoff)
+   -p	   Number of processors used by R scripts (default: 1)
+
 EOF
 }
 
@@ -48,8 +64,8 @@ cores="1"
 window="2"
 type="single"
 windowe="1"
-export LANG=C #locale defaults
-export LC_ALL=C #locale defaults
+initModel="deterministic"
+uniq="n"
 
 #Defaults -- Do not change
 sdir=""
@@ -59,8 +75,10 @@ binsize="ns"
 fraglen="ns"
 ran=$RANDOM
 wdir=$(mktemp -d)
+export LANG=C #locale defaults
+export LC_ALL=C #locale defaults
 
-while getopts "s:g:o:c:m:r:f:p:w:b:t:e:" OPTION
+while getopts "s:g:o:c:m:r:f:p:w:b:t:e:i:d:" OPTION
 do
 	case $OPTION in
 	s) sdir=$OPTARG
@@ -87,6 +105,10 @@ do
 	;;
 	e) windowe=$OPTARG
 	;;
+	i) initModel=$OPTARG
+	;;
+	d) uniq=$OPTARG
+	;;
 	?)
 	usage
 	exit
@@ -105,14 +127,25 @@ then
      usage
      exit 1
 fi
+if [[ -d "$out/peaks" ]]; then
+	printf "\n\nOutput directory $out/peaks already exists. I can't override existing results!\n\n"
+	exit 0
+fi
+if [ $fraglen == "ns" ]; then
+	if [[ -d "$out/xcorr" ]]; then
+		printf "\n\nOutput directory $out/xcorr already exists. I can't override existing results!\n\n"
+		exit 0
+	fi
+fi
 #=======================> DONE!
+
 
 
 
 # ============================= 
 # Step One: Initial Processing
 # =============================
-printf "\n\n========================================\nStarted JAMM Pipeline v1.0.6rev3...Hang on!\n========================================\n\n"
+printf "\n\n============================================\nStarted JAMM Pipeline v1.0.7rev1...Hang on!\n============================================\n\n"
 
 if [ ! -d "$wdir" ]; then
 	mkdir $wdir #make working directory
@@ -162,17 +195,21 @@ printf "Done!\n"
 fi
 
 #determine average read lengths
-printf "Getting average read lengths..."
-	if [ ! -z $bdir ]; then
-		readC=$(awk '{a=$3-$2;print a;}' "$wdir/bkgd.$ran/ctrl.bed" | perl -lane '$a+=$_;END{print $a/$.}' | awk '{a=$1+0.5;print a;}' | cut -d"." -f1)
-	fi
-	readL=""
-	for s in $sdir/*.bed; do #and for each sample file
-		read=$(awk '{a=$3-$2;print a;}' "$s" | perl -lane '$a+=$_;END{print $a/$.}' | awk '{a=$1+0.5;print a;}' | cut -d"." -f1)
-		readL="$readL,$read"
-	done
-	readL=${readL#","}
-printf "Done!\n"
+printf "Getting average read lengths...\n"
+readL=""
+if [ ! -z $bdir ]; then
+	readC=$(awk '{a=$3-$2;print a;}' "$wdir/bkgd.$ran/ctrl.bed" | perl -lane '$a+=$_;END{print $a/$.}' | awk '{a=$1+0.5;print a;}' | cut -d"." -f1)
+	printf "Control: $readC\n"
+fi
+readL=""
+for s in $sdir/*.bed; do #and for each sample file
+	file=$(basename $s)
+	samplefile=$(echo $file | awk -F"." '{print $1}');	
+	read=$(awk '{a=$3-$2;print a;}' "$s" | perl -lane '$a+=$_;END{print $a/$.}' | awk '{a=$1+0.5;print a;}' | cut -d"." -f1)
+	printf "$samplefile: $read\n"
+	readL="$readL,$read"
+done
+readL=${readL#","}
 #=======================> DONE!
 
 
@@ -300,7 +337,6 @@ if [ $binsize == "ns" ]; then
 	#remove leading comma
 	samplelist=${samplelist#","}
 	frag=${frag#","}
-	
 	Rscript "$sPath/bincalculator.r" -ibed="$samplelist" -s="$gsize" -rl="$readL" -d="$wdir" -p="$cores"	-f="$frag" -type="$type"
 fi
 if [ $binsize != "ns" ]; then
@@ -361,7 +397,12 @@ for f in $wdir/sizes.$ran/*; do #for each chromosome
 					read=$(echo $readL | cut -f "$k" -d ",")
 					k=$(($k+1))
 				fi
-				perl "$sPath/readshifter.pl" "$wdir/samples.$ran/$samplefile" $shift $read > "$wdir/samples.$ran/ext.$samplefile"
+				if [ $uniq == "y" ]; then
+					perl "$sPath/readshifter.pl" "$wdir/samples.$ran/$samplefile" $shift $read > "$wdir/samples.$ran/ext.$samplefile"
+				fi
+				if [ $uniq == "n" ]; then
+					perl "$sPath/readshifter.pl" "$wdir/samples.$ran/$samplefile" $shift $read | uniq > "$wdir/samples.$ran/ext.$samplefile"
+				fi				
 			fi
 		done
 		
@@ -376,7 +417,13 @@ for f in $wdir/sizes.$ran/*; do #for each chromosome
 				l=$(($dupnum+1))
 				bshift=$(echo $frag | cut -f "$l" -d ",")
 			fi
-			perl "$sPath/readshifter.pl" "$wdir/bkgd.$ran/bkgd.$chr.ctrl.bed" $bshift $readC > "$wdir/bkgd.$ran/ext.bkgd.$chr.ctrl.bed"
+			
+			if [ $uniq == "y" ]; then
+				perl "$sPath/readshifter.pl" "$wdir/bkgd.$ran/bkgd.$chr.ctrl.bed" $bshift $readC > "$wdir/bkgd.$ran/ext.bkgd.$chr.ctrl.bed"
+			fi
+			if [ $uniq == "n" ]; then
+				perl "$sPath/readshifter.pl" "$wdir/bkgd.$ran/bkgd.$chr.ctrl.bed" $bshift $readC | uniq > "$wdir/bkgd.$ran/ext.bkgd.$chr.ctrl.bed"
+			fi
 			bkgdfile="$wdir/bkgd.$ran/ext.bkgd.$chr.ctrl.bed"
 		fi
 		
@@ -385,7 +432,7 @@ for f in $wdir/sizes.$ran/*; do #for each chromosome
 		frag=${frag#","}
 		
 		#call the peak calling R script
-		Rscript "$sPath/peakfinder.r" -sfile="$f" -bednames="$samplelist" -frag="$frag" -bkgd=$bkgdfile -out="$wdir/peaks.$ran/" -clustnummer="$clustno" -resolution="$resol" -window="$window" -p="$cores" -bin="$binsize" -type="$type" -chrcount="$counting" -windowe="$windowe"
+		Rscript "$sPath/peakfinder.r" -sfile="$f" -bednames="$samplelist" -frag="$frag" -bkgd=$bkgdfile -out="$wdir/peaks.$ran/" -clustnummer="$clustno" -resolution="$resol" -window="$window" -p="$cores" -bin="$binsize" -type="$type" -chrcount="$counting" -initModel="$initModel" -windowe="$windowe"
 		counting=$(($counting+1));
 		cp "$wdir/peaks.$ran/$chr.peaks.bed" "$out/peaks/$chr.peaks.bed"
 		rm "$wdir/peaks.$ran/$chr.peaks.bed"
@@ -435,7 +482,7 @@ for f in $wdir/sizes.$ran/*; do #for each chromosome
 	frag=${frag#","}
 		
 	#call the peak calling R script
-	Rscript "$sPath/peakfinder.r" -sfile=$f -bednames=$samplelist -frag="NA" -bkgd=$bkgdfile -out="$wdir/peaks.$ran/" -clustnummer="$clustno" -resolution="$resol" -window="$window" -p="$cores" -bin="$binsize" -type="$type" -chrcount="$counting" -windowe="$windowe"
+	Rscript "$sPath/peakfinder.r" -sfile=$f -bednames=$samplelist -frag="NA" -bkgd=$bkgdfile -out="$wdir/peaks.$ran/" -clustnummer="$clustno" -resolution="$resol" -window="$window" -p="$cores" -bin="$binsize" -type="$type" -chrcount="$counting" -initModel="$initModel" -windowe="$windowe"
 	counting=$(($counting+1));
 	cp "$wdir/peaks.$ran/$chr.peaks.bed" "$out/peaks/$chr.peaks.bed"
 	rm "$wdir/peaks.$ran/$chr.peaks.bed"
@@ -448,10 +495,12 @@ cp $wdir/peaks.$ran/min.peaksize $out/peaks/min.peaksize
 
 
 #concatenate, sort and filter
-cat $out/peaks/*.bed > $out/peaks/all.narrowPeak
-Rscript "$sPath/peakhelper.r" -filelist="$out/peaks/all.narrowPeak"
-perl "$sPath/peakfilter.pl" $out/peaks/all.narrowPeak | sort -nr -k7 > $out/peaks/filtered.peaks.narrowPeak
-cut -f1-10 $out/peaks/all.narrowPeak | awk -F"\t" -v j=0 '$7 > j' | sort -nr -k7 > $out/peaks/all.peaks.narrowPeak
+cat $out/peaks/*.bed > $out/peaks/all.narrowPeak 
+if [[ -s  $out/peaks/all.narrowPeak ]]; then
+	Rscript "$sPath/peakhelper.r" -filelist="$out/peaks/all.narrowPeak"
+	perl "$sPath/peakfilter.pl" $out/peaks/all.narrowPeak | sort -nr -k7 > $out/peaks/filtered.peaks.narrowPeak
+	cut -f1-10 $out/peaks/all.narrowPeak | awk -F"\t" -v j=0 '$7 > j' | sort -nr -k7 > $out/peaks/all.peaks.narrowPeak
+fi
 rm $out/peaks/all.narrowPeak
 rm $out/peaks/*.bed
 rm $out/peaks/min.peaksize

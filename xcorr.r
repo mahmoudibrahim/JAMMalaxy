@@ -1,7 +1,22 @@
-###############################
-#### Fragment Length Calculator
-#### R script		
-###############################
+########################################################################
+# JAMMv1.0.7rev1 is a peak finder for joint analysis of NGS replicates.
+# Copyright (C) 2014-2015  Mahmoud Ibrahim
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Contact: mahmoud.ibrahim@mdc-berlin.de
+########################################################################
 
 
 # ========================= 
@@ -31,7 +46,7 @@ storeFile = NA # file to store result
 for (each.arg in args) {
 	#input bed file
 	if (grepl('^-ibed=',each.arg)) {
-		arg.split <- strsplit(each.arg,'=',fixed=TRUE)[[1]] # split on =
+		arg.split <- strsplit(each.arg,'=',fixed=TRUE)[[1]] 
 		if (! is.na(arg.split[2]) ) {
 				ibed <- arg.split[2]
 		} else {
@@ -39,7 +54,7 @@ for (each.arg in args) {
 		} 
 	}
 	if (grepl('^-s=',each.arg)) {			
-		arg.split <- strsplit(each.arg,'=',fixed=TRUE)[[1]] # split on =
+		arg.split <- strsplit(each.arg,'=',fixed=TRUE)[[1]] 
 		if (! is.na(arg.split[2]) ) {
 			sFile <- arg.split[2] 
 		} else {
@@ -47,7 +62,7 @@ for (each.arg in args) {
 		}
 	}
 	if (grepl('^-rl=',each.arg)) {			
-		arg.split <- strsplit(each.arg,'=',fixed=TRUE)[[1]] # split on =
+		arg.split <- strsplit(each.arg,'=',fixed=TRUE)[[1]] 
 		if (! is.na(arg.split[2]) ) {
 			rl <- arg.split[2] 
 		} else {
@@ -55,7 +70,7 @@ for (each.arg in args) {
 		}
 	}
 	if (grepl('^-d=',each.arg)) {			
-		arg.split <- strsplit(each.arg,'=',fixed=TRUE)[[1]] # split on =
+		arg.split <- strsplit(each.arg,'=',fixed=TRUE)[[1]] 
 		if (! is.na(arg.split[2]) ) {
 			storeFile <- arg.split[2] 
 		} else {
@@ -63,7 +78,7 @@ for (each.arg in args) {
 		}
 	}
 	if (grepl('^-p=',each.arg)) {			
-		arg.split <- strsplit(each.arg,'=',fixed=TRUE)[[1]] # split on =
+		arg.split <- strsplit(each.arg,'=',fixed=TRUE)[[1]] 
 		if (! is.na(arg.split[2]) ) {
 			cornum <- as.numeric(arg.split[2]) 
 		} else {
