@@ -1,4 +1,4 @@
-<tool id="jamm" name="JAMM" version="1.0.6.3">
+<tool id="jamm" name="JAMM" version="1.0.7">
 <description>Calls peaks on NGS data</description>
 <requirements>
 	<requirement>R</requirement>
@@ -82,13 +82,21 @@
     <citation type="doi">10.1093/bioinformatics/btu568</citation>
 </citations>    
 <help>
-.. class:: infomark
+**What it does**
+JAMM calls peaks on NGS data, i.e. for finding binding sites.
+
+.. class:: warningmark
 
 This tool requires files in *bed* format.
 
-----
+.. class:: infomark
 
-**What it does**
-JAMM calls peaks on NGS data, i.e. for finding binding sites.
+If you are just starting out, you can find some sensible parameter choices here.
+
+* ChIP-Seq TF: everything default
+* ChIP-Seq HM: Binsize=200
+* ChIP-Seq Broad HM: Binsize=200 Resolution=region
+* ChIP-Seq Very Broad HM: Binsize=10000 Resolution=window
+* DNase-seq: Fragment length=1
 </help>
 </tool>
