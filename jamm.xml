@@ -5,15 +5,25 @@
 	<requirement>perl</requirement>
 </requirements>
 <command interpreter="python">
-jammwrapper.py -i
-	#for $x in $replicate
-	${x.input.file_name}
-	#end for
+    <![CDATA[ 
+    jammwrapper.py -i 
+    #for $x in $input
+	${x.replicate.file_name} #end for
+    
+    -c 
+    
+    #for $x in $control
+    ${x.controlreplicate.file_name} #end for
+
 	-g ${genomeSizeFile}
 	-z $output
 	-m $mode
 	-r $resolution
-	-p $processes
+    -p $processes
+    -t $type
+    -f $fraglen
+    -b $binsize
+    ]]>
 </command>
 
 <stdio>
@@ -23,12 +33,15 @@ jammwrapper.py -i
 </stdio>
 
 <inputs>
-	<repeat name="replicate" title="Replicate">
-		<param name="input" type="data" format="bed">
-		</param>
-	</repeat>
-	<param name="genomeSizeFile" type="data" label="File indicating chromosome sizes" description="Chromosome size">
-	</param>
+	<repeat name="input" title="Sample Replicates">
+        <param name="replicate" type="data" format="bed"></param>
+    </repeat>
+
+	<repeat name="control" title="Negative Control Replicates (e.g. input) - optional">
+        <param name="controlreplicate" type="data" format="bed"></param>
+    </repeat>
+
+	<param name="genomeSizeFile" type="data" label="File indicating chromosome sizes" description="Chromosome size"></param>
 	<param name="mode" type="select" label="Mode (normal or narrow)">
      <option value="normal">normal</option>
      <option value="narrow">narrow</option>
@@ -37,8 +50,14 @@ jammwrapper.py -i
      <option value="peak">peak</option>
      <option value="region">region</option>
     </param>
-         
-    <param name="processes"  type="text" value="4" optional="true" help="Number of threads used by R" /> 
+	<param name="type" type="select" label="Type of data (Single or paired. Paired requires BEDPE datasets)">
+     <option value="single" selected="true">single</option>
+     <option value="paired">paired</option>
+    </param>
+    <param name="fraglen"    type="text" value="ns" label="Fragment length. Estimated by default (ns)" /> 
+    <param name="binsize"    type="text" value="ns" label="Bin size. Estimated by default (ns)" />
+    <param name="processes"  type="text" value="4"  label="Number of threads used by R" help="Depending on your Galaxy configuration, 1 should be safe and up to 4 should be fine." /> 
+
 </inputs>
 
 <outputs>
@@ -47,8 +66,8 @@ jammwrapper.py -i
 
 <tests>
  <test>
-  <param name="input" value="test1.bed" ftype="bed"/>
-  <param name="input" value="test2.bed" ftype="bed"/>
+  <param name="replicate" value="test1.bed" ftype="bed"/>
+  <param name="replicate" value="test2.bed" ftype="bed"/>
   <param name="genomeSizeFile" value="chrSizes21.csize"/>
   <output name="output" ftype="tabular">
     <assert_contents>

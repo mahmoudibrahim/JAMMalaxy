@@ -6,7 +6,7 @@
 # map the files (from Galaxy history) to a directory
 # pass the parameters from the GUI to JAMM.sh
 # call JAMM.sh
-# maybe map the resulting tabular files back to history items, the XML could take care of that if output is fixed
+# map the resulting tabular files back to history items
 
 #import optparse
 import argparse, os, shutil, subprocess, sys, tempfile
@@ -22,17 +22,20 @@ def main():
 
     #Read command line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', dest = 'input', nargs='+')
+    parser.add_argument('-i', dest = 'input', nargs='+') # + allows for 1 or more arguments
+    parser.add_argument('-c', dest = 'control', nargs='?', const='nocontrol') # allow for empty control dir
     parser.add_argument('-g', dest = 'gsize')
     parser.add_argument('-z', dest = 'peakfile')
     
     parser.add_argument('-m', dest = 'mode')
     parser.add_argument('-r', dest = 'resolution')
     parser.add_argument('-p', dest = 'processes')
-    #parser.add_argument('-b', dest = 'binSize')
+    parser.add_argument('-t', dest = 'type')
+    parser.add_argument('-f', dest = 'fraglen')
+    parser.add_argument('-b', dest = 'binsize')
     
     args = parser.parse_args()
-    
+   
     print "################################################" 
     print "Wrapper debugging" 
     print "################################################" 
@@ -53,25 +56,31 @@ def main():
     #parser.add_option( '-i',  dest='input', help='input bed files' )
     #parser.add_option( '-c',  dest='csize', help='chr sizes' )
     #(options, args) = parser.parse_args()	
-   
+    
     # create temp dir
     tmp_dir = tempfile.mkdtemp()
-    #os.chdir(tmp_dir)
     # symlink creation
     for file in args.input:
         filen =  tmp_dir + "/" + os.path.basename(os.path.splitext(file)[0])+".bed"
         os.symlink(file, filen)
-        
-        # in case temp files should have random names
-        # ref_file = tempfile.NamedTemporaryFile( dir=tmp_dir )
-        # ref_file_name = ref_file.name
-        # ref_file.close()
-        # os.symlink( file, ref_file_name )
+   
+    if args.control != 'nocontrol':
+        tmp_dir2 = tempfile.mkdtemp()
+        # symlink creation
+        for file in args.control:
+            filen =  tmp_dir2 + "/" + os.path.basename(os.path.splitext(file)[0])+".bed"
+            os.symlink(file, filen)
+        #command = ( "/home/cmesser/jamm/JAMM.sh -s %s -g %s -o results -m %s -r %s -p %s"
+        command = ( "bash %s/JAMM.sh -s %s -c %s -g %s -o results -m %s -r %s -p %s -t %s -f %s -b %s"
+         % ( path, tmp_dir, tmp_dir2, args.gsize, args.mode, args.resolution, args.processes, \
+             args.type, args.fraglen, args.binsize ) ) 
+    else:
+        command = ( "bash %s/JAMM.sh -s %s -g %s -o results -m %s -r %s -p %s -t %s -f %s -b %s"
+         % ( path, tmp_dir, args.gsize, args.mode, args.resolution, args.processes, \
+             args.type, args.fraglen, args.binsize ) ) 
 
-	    
-    #command = ( "/home/cmesser/jamm/JAMM.sh -s %s -g %s -o results -m %s -r %s -p %s"
-    command = ( "bash %s/JAMM.sh -s %s -g %s -o results -m %s -r %s -p %s"
-     % ( path, tmp_dir, args.gsize, args.mode, args.resolution, args.processes ) ) 
+         
+    print "Command called by bash:"     
     print command
     # depending on how your programm is called, it may be necessary to use shlex.split on the command string before
     # in this case, this was actually harmful. idk why
