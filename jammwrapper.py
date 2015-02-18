@@ -25,7 +25,8 @@ def main():
     parser.add_argument('-i', dest = 'input', nargs='+') # + allows for 1 or more arguments
     parser.add_argument('-c', dest = 'control', nargs='?', const='nocontrol') # allow for empty control dir
     parser.add_argument('-g', dest = 'gsize')
-    parser.add_argument('-z', dest = 'peakfile')
+    parser.add_argument('-o', dest = 'peakfile')
+    parser.add_argument('-of', dest = 'filteredpeakfile')
     
     parser.add_argument('-m', dest = 'mode')
     parser.add_argument('-r', dest = 'resolution')
@@ -43,8 +44,9 @@ def main():
     for j in args.input:
         print j
 
-    print "output file:"
+    print "output files:"
     print args.peakfile
+    print args.filteredpeakfile
     print "current working dir:"
     print os.getcwd() 
     print "dir with jammwrapper in it:"
@@ -58,19 +60,21 @@ def main():
     #(options, args) = parser.parse_args()	
     
     # create temp dir
+    print "Creating tmp dirs"
     tmp_dir = tempfile.mkdtemp()
+    print os.getcwd() 
+    tmp_dir2 = tempfile.mkdtemp()
+    print os.getcwd() 
     # symlink creation
     for file in args.input:
         filen =  tmp_dir + "/" + os.path.basename(os.path.splitext(file)[0])+".bed"
         os.symlink(file, filen)
    
     if args.control != 'nocontrol':
-        tmp_dir2 = tempfile.mkdtemp()
         # symlink creation
         for file in args.control:
             filen =  tmp_dir2 + "/" + os.path.basename(os.path.splitext(file)[0])+".bed"
             os.symlink(file, filen)
-        #command = ( "/home/cmesser/jamm/JAMM.sh -s %s -g %s -o results -m %s -r %s -p %s"
         command = ( "bash %s/JAMM.sh -s %s -c %s -g %s -o results -m %s -r %s -p %s -t %s -f %s -b %s"
          % ( path, tmp_dir, tmp_dir2, args.gsize, args.mode, args.resolution, args.processes, \
              args.type, args.fraglen, args.binsize ) ) 
@@ -94,13 +98,15 @@ def main():
     #mv files to a place where galaxy wrapper can find them
     # mvcommand = "mv %s/results/peaks/all.peaks.narrowPeak %s" % ( tmp_dir, args.peakfile )
     mvcommand = "mv results/peaks/all.peaks.narrowPeak %s" % args.peakfile
-    
-    print mvcommand
+    os.system(mvcommand)
+    mvcommand = "mv results/peaks/filtered.peaks.narrowPeak %s" % args.filteredpeakfile
     os.system(mvcommand)
 
 # clean up temp dir
     if os.path.exists( tmp_dir ):
         shutil.rmtree( tmp_dir )    
+    if os.path.exists( tmp_dir2 ):
+        shutil.rmtree( tmp_dir2 )    
 
     
 if __name__ == "__main__":
