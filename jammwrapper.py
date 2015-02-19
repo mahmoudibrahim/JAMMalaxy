@@ -23,7 +23,8 @@ def main():
     #Read command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', dest = 'input', nargs='+') # + allows for 1 or more arguments
-    parser.add_argument('-c', dest = 'control', nargs='*', default=None) # allow for not supplying -c
+    # parser.add_argument('-c', dest = 'control', nargs='*', default=None) # allow for not supplying -c
+    parser.add_argument('-c', dest = 'control', action='append') # allow for not supplying -c
     parser.add_argument('-g', dest = 'gsize')
     parser.add_argument('-o', dest = 'peakfile')
     parser.add_argument('-of', dest = 'filteredpeakfile')

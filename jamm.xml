@@ -10,13 +10,10 @@
     #for $x in $input
 	${x.replicate.file_name} #end for
 
-    #if $varExists('control.controlreplicate[1]')
-    -c 
     #for $x in $control
-    ${x.controlreplicate.file_name} #end for
-    #end if
-
-	-g ${genomeSizeFile}
+    -c ${x.controlreplicate.file_name} #end for
+    
+    -g ${genomeSizeFile}
     -o $output
     -of $outputfiltered
 	-m $mode
