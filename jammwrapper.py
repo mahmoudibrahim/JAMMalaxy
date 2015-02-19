@@ -23,7 +23,7 @@ def main():
     #Read command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', dest = 'input', nargs='+') # + allows for 1 or more arguments
-    parser.add_argument('-c', dest = 'control', nargs='?', const='nocontrol') # allow for empty control dir
+    parser.add_argument('-c', dest = 'control', nargs='*', default=None) # allow for not supplying -c
     parser.add_argument('-g', dest = 'gsize')
     parser.add_argument('-o', dest = 'peakfile')
     parser.add_argument('-of', dest = 'filteredpeakfile')
@@ -40,9 +40,13 @@ def main():
     print "################################################" 
     print "Wrapper debugging" 
     print "################################################" 
-    print "Files to be used:"
+    print "Sample files:"
     for j in args.input:
         print j
+    if args.control is not None:
+        print "Control files:"
+        for j in args.control:
+            print j
 
     print "output files:"
     print args.peakfile
@@ -60,26 +64,29 @@ def main():
     #(options, args) = parser.parse_args()	
     
     # create temp dir
-    print "Creating tmp dirs"
     tmp_dir = tempfile.mkdtemp()
-    print os.getcwd() 
-    tmp_dir2 = tempfile.mkdtemp()
-    print os.getcwd() 
+    os.mkdir(tmp_dir + "/sample")
     # symlink creation
     for file in args.input:
-        filen =  tmp_dir + "/" + os.path.basename(os.path.splitext(file)[0])+".bed"
+        filen =  tmp_dir + "/sample/" + os.path.basename(os.path.splitext(file)[0])+".bed"
+        print "input files mapped: %s" % filen
         os.symlink(file, filen)
    
-    if args.control != 'nocontrol':
+    # Here comes some unnecessary repetition
+    # if control files are supplied, we make another tmp subdir and put those files there.
+    # JAMM.sh is then called with one additional switch -c
+    if args.control is not None:
         # symlink creation
+        os.mkdir(tmp_dir + "/control")
         for file in args.control:
-            filen =  tmp_dir2 + "/" + os.path.basename(os.path.splitext(file)[0])+".bed"
+            filen =  tmp_dir + "/control/" + os.path.basename(os.path.splitext(file)[0])+".bed"
+            print "input files mapped: %s" % filen
             os.symlink(file, filen)
-        command = ( "bash %s/JAMM.sh -s %s -c %s -g %s -o results -m %s -r %s -p %s -t %s -f %s -b %s"
-         % ( path, tmp_dir, tmp_dir2, args.gsize, args.mode, args.resolution, args.processes, \
+        command = ( "bash %s/JAMM.sh -s %s/sample -c %s/control -g %s -o results -m %s -r %s -p %s -t %s -f %s -b %s"
+         % ( path, tmp_dir, tmp_dir, args.gsize, args.mode, args.resolution, args.processes, \
              args.type, args.fraglen, args.binsize ) ) 
     else:
-        command = ( "bash %s/JAMM.sh -s %s -g %s -o results -m %s -r %s -p %s -t %s -f %s -b %s"
+        command = ( "bash %s/JAMM.sh -s %s/sample -g %s -o results -m %s -r %s -p %s -t %s -f %s -b %s"
          % ( path, tmp_dir, args.gsize, args.mode, args.resolution, args.processes, \
              args.type, args.fraglen, args.binsize ) ) 
 
@@ -105,9 +112,6 @@ def main():
 # clean up temp dir
     if os.path.exists( tmp_dir ):
         shutil.rmtree( tmp_dir )    
-    if os.path.exists( tmp_dir2 ):
-        shutil.rmtree( tmp_dir2 )    
-
     
 if __name__ == "__main__":
     main()
