@@ -1,7 +1,6 @@
 ===================
-Version 1.0.6rev3
+Version 1.0.7rev1
 ===================
 
-- fixed bash localization bug for those with locales having "," as decimal point. Now the default locale is "C", set in the JAMM.sh and SignalGenerator.sh scripts.
-
-
+- default seed is 1011414
+- 

@@ -1,7 +1,22 @@
-#!/usr/bin/bash
-
-
-
+########################################################################
+# JAMMv1.0.7rev1 is a peak finder for joint analysis of NGS replicates.
+# Copyright (C) 2014-2015  Mahmoud Ibrahim
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Contact: mahmoud.ibrahim@mdc-berlin.de
+########################################################################
 
 ##Finding out the path
 sPath="`dirname \"$0\"`"
@@ -12,7 +27,7 @@ sPath="`( cd \"$sPath\" && pwd )`"
 usage()
 {
 cat << EOF
-Welcome to JAMM v1.0.6rev3 Signal Generator Script (GNU GPLv3). Copyright (C) 2014  Mahmoud Ibrahim.
+Welcome to JAMM v1.0.7rev1 Signal Generator Script (GNU GPLv3). Copyright (C) 2014-2015  Mahmoud Ibrahim.
 
 This program comes with ABSOLUTELY NO WARRANTY; for details visit http://www.gnu.org/licenses/gpl.html. This is free software, and you are welcome to redistribute it under certain conditions; visit http://www.gnu.org/licenses/gpl.html for details.
 
@@ -23,8 +38,9 @@ OPTIONS:
    -c      directory containing input or Control files
    -r 	   file with Regions to get signal for (required)
    -b      Bin size for signal generation (default: 10)
-   -f      Fragment lengths (required)
+   -f      Fragment lengths (required if -t is "single")
    -p	   Number of processors used by R scripts (default: 1)
+   -t	   Alignment type, paired or single (default: single)
  
 EOF
 }
@@ -34,11 +50,7 @@ EOF
 # Process Input parameters
 # =========================
 
-#Defaults -- Change those if you want
-export LANG=C #locale defaults
-export LC_ALL=C #locale defaults
 
-#Defaults -- Do not change
 sdir=""
 gsize=""
 out=""
@@ -48,9 +60,9 @@ fraglen=""
 wdir=$(mktemp -d)
 ran=$RANDOM
 cores="1"
+type="single"
 
-
-while getopts "s:o:c:r:b:f:g:p:" OPTION
+while getopts "s:o:c:r:b:f:g:p:t:" OPTION
 do
 	case $OPTION in
 	s) sdir=$OPTARG
@@ -69,6 +81,8 @@ do
 	;;
 	p) cores=$OPTARG
 	;;
+	t) type=$OPTARG
+	;;
 	?)
 	usage
 	exit
@@ -77,10 +91,23 @@ do
 done
 
 
-if [[ -z $fraglen ]] || [[ -z $sdir ]] || [[ -z $regs ]] || [[ -z $out ]]
+if [[ -z $sdir ]] || [[ -z $regs ]] || [[ -z $out ]]
 then
      usage
      exit 1
+fi
+
+if [[ -z $fraglen ]]
+then
+	if [ $type == "single" ]
+	then
+     usage
+     exit 1
+	fi
+fi
+if [[ -d "$out/signal" ]]; then
+	printf "\n\nOutput directory $out/signal already exists. I can't override existing results!\n\n"
+	exit 0
 fi
 #=======================> DONE!
 
@@ -89,7 +116,7 @@ fi
 # ============================= 
 # Step One: Initial Processing
 # =============================
-printf "\n\n============================================\nStarted JAMM Signal Generator Pipeline...Hang on!\n============================================\n\n"
+printf "\n\n=======================================================\nStarted JAMM1.0.7rev1 Signal Generator Pipeline...Hang on!\n=======================================================\n\n"
 
 if [ ! -d "$wdir" ]; then
 	mkdir $wdir #make working directory
@@ -135,13 +162,13 @@ for f in $wdir/sizes.$ran/*; do
 	awk -v chr="$chr" -v ext="$wdir/bkgd.$ran/" -F"\t" '$1 == chr { print $2"\t"$6 >> ext"bkgd."chr".ctrl.bed" }' "$wdir/bkgd.$ran/ctrl.bed"
 done
 
-rm $wdir/bkgd.$ran/ctrl.bed
 
 printf "Done!\n"
 fi
 
 
 #determine average read lengths
+if [ $type == "single" ]; then
 printf "Getting average read lengths..."
 	if [ ! -z $bdir ]; then
 		readC=$(awk '{a=$3-$2;print a;}' "$wdir/bkgd.$ran/ctrl.bed" | perl -lane '$a+=$_;END{print $a/$.}' | awk '{print int($1)}')
@@ -153,6 +180,7 @@ printf "Getting average read lengths..."
 	done
 	readL=${readL#","}
 printf "Done!\n"
+fi
 #=======================> DONE!
 
 
@@ -169,6 +197,7 @@ mkdir $out/signal #store signal
 
 printf "Generating Signal...(bin size: $signal)\n"
 
+if [ $type == "single" ]; then
 counting=1;			
 for f in $wdir/sizes.$ran/*; do #for each chromosome
 		samplelist=""
@@ -211,12 +240,57 @@ for f in $wdir/sizes.$ran/*; do #for each chromosome
 		frag=${frag#","}
 		
 		#call the peak calling R script
-		Rscript "$sPath/signalmaker.r" -chromoS="$chrSize" -chromo="$chr" -bednames=$samplelist -frag=$frag -bkgd=$bkgdfile -out="$wdir/signal.$ran/" -sig="$signal" -regions="$regs" -p="$cores" -chrcount="$counting"
+		Rscript "$sPath/signalmaker.r" -chromoS="$chrSize" -chromo="$chr" -bednames=$samplelist -frag=$frag -bkgd=$bkgdfile -out="$wdir/signal.$ran/" -sig="$signal" -regions="$regs" -p="$cores" -chrcount="$counting" -t="$type"
 		cat $wdir/signal.$ran/*.bedSignal | awk -F"\t" -v j=0 '$4 > j' > "$out/signal/$chr.bedGraph"
 		rm $wdir/signal.$ran/*.bedSignal
 		counting=$(($counting+1));
 done
 counting=1;
+fi
+
+
+
+if [ $type == "paired" ]; then
+counting=1;
+for f in $wdir/sizes.$ran/*; do #for each chromosome
+	samplelist=""
+	
+	sizefile=$(basename $f)
+	chr=$(echo $sizefile | awk -F"." '{print $2}' | awk -F"." '{print $1}');
+	chrSize=$(cat $f | cut -f2);
+	printf "Chromosome $chr: "
+		
+	#list of sample bed files and fragment lengths
+	for s in $wdir/samples.$ran/*.bed; do #and for each sample file
+		samplefile=$(basename $s)
+		chr2=$(echo $samplefile | awk -F"." '{print $2}');
+		if [ $chr == $chr2 ] #belonging to this chromosome
+		then
+			samplelist="$samplelist,$wdir/samples.$ran/$samplefile"
+			samplename=$(echo $samplefile | awk -F"." '{ print $3 }')
+			samplefilename=$(echo $samplefile | cut -d'.' -f 3-)
+			x="$sdir/$samplefilename"
+		fi
+	done
+		
+	#control file
+	bkgdfile="None"
+	if [ ! -z $bdir ]; then
+		bkgdfile="$wdir/bkgd.$ran/bkgd.$chr.ctrl.bed"
+	fi
+		
+	#remove leading comma
+	samplelist=${samplelist#","}
+	frag=${frag#","}
+		
+	#call the peak calling R script
+	Rscript "$sPath/signalmaker.r" -chromoS="$chrSize" -chromo="$chr" -bednames=$samplelist -frag=$frag -bkgd=$bkgdfile -out="$wdir/signal.$ran/" -sig="$signal" -regions="$regs" -p="$cores" -chrcount="$counting" -t="$type"
+	cat $wdir/signal.$ran/*.bedSignal | awk -F"\t" -v j=0 '$4 > j' > "$out/signal/$chr.bedGraph"
+	rm $wdir/signal.$ran/*.bedSignal
+	counting=$(($counting+1));
+done
+counting=1;
+fi
 #=======================> DONE!
 
 rm -rf $wdir

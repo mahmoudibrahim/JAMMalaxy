@@ -1,9 +1,22 @@
-###############################
-#### Signal Maker for NGS Data
-#### R script		
-###############################
-
-
+########################################################################
+# JAMMv1.0.7rev1 is a peak finder for joint analysis of NGS replicates.
+# Copyright (C) 2014-2015  Mahmoud Ibrahim
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Contact: mahmoud.ibrahim@mdc-berlin.de
+########################################################################
 
 
 # ======================= 
@@ -76,10 +89,15 @@ parsein = function(bedfile) {
 	return(reads)
 }
 
-
+#Read in bedpe(st2)
+parseinpe = function(bedfile) {
+	l = read.table(bedfile, header = FALSE)
+	l = cbind((l[[1]] + 1), l[[2]])
+	return(l)
+}
 
 #Produces normalized extended read counts (takes output of parsein(), return a vector of floats)
-countreads = function(bedfile, reads, frag, chromsize, filelist) {
+countreads = function(bedfile, reads, frag, chromsize, filelist, chrcount) {
 	
 	o = which(filelist == bedfile)
 	
@@ -110,6 +128,36 @@ countreads = function(bedfile, reads, frag, chromsize, filelist) {
 }
 
 
+
+
+#Produces normalized extended read counts (takes output of parsein(), return a vector of floats / PAIRED END)
+countreadspe = function(bedfile, reads, chromsize, filelist, chrcount) {
+	
+	o = which(filelist == bedfile)
+	
+	counts = vector(mode = "numeric", length = chromsize)
+
+	for (j in 1:length(reads[[o]][,1])) {
+		counts[(reads[[o]][j,1]):(reads[[o]][j,2])] = counts[(reads[[o]][j,1]):(reads[[o]][j,2])] + 1
+	}
+	
+	mCount = mean(counts)
+	
+	if (chrcount == 1) {
+		counts = counts/mCount
+		write(paste(mCount), file = paste0(out, "/norma.", o, ".info"))
+	} else {
+		meanCounts = mean(as.numeric(read.table(paste0(out, "/norma.", o, ".info"))[[1]]))
+		if ((mCount >  (5*meanCounts)) || (mCount <  (0.2*meanCounts))) {
+			mCount = meanCounts
+		} else {
+			write(paste(mCount), file = paste0(out, "/norma.", o, ".info"), append = TRUE)
+		}
+		counts = counts/mCount
+	}
+	
+	return(counts)
+}
 
 
 #generate signal
@@ -187,10 +235,8 @@ for (each.arg in args) {
 	if (grepl('^-frag=',each.arg)) {
 		arg.split <- strsplit(each.arg,'=',fixed=TRUE)[[1]] 
 		if (! is.na(arg.split[2]) ) {
-				frag <- arg.split[2]
-		} else {
-			stop('No fragment length given')
-		} 
+			frag <- arg.split[2]
+		}
 	}	
 	#bakcground files directory
 	if (grepl('^-bkgd=',each.arg)) {
@@ -252,6 +298,13 @@ for (each.arg in args) {
 				chrcount <- as.numeric(arg.split[2])
 		} 
 	}
+	#alignment type
+	if (grepl('^-t=',each.arg)) {
+		arg.split <- strsplit(each.arg,'=',fixed=TRUE)[[1]] 
+		if (! is.na(arg.split[2]) ) {
+				type <- arg.split[2]
+		} 
+	}
 }
 
 ##Parse in variables
@@ -260,7 +313,9 @@ numdup = length(readsFiles) #number of replicates
 if (bkgd != "None") {
 	readsFiles[[numdup+1]] = bkgd
 }
-frags = as.numeric(strsplit(frag, ",", fixed = TRUE)[[1]])
+if (type == "single") {
+	frags = as.numeric(strsplit(frag, ",", fixed = TRUE)[[1]])
+}
 rm(bednames)
 
 options(stringsAsFactors = FALSE)
@@ -278,10 +333,20 @@ regions = regions[regions[[1]] == chromName, , drop = FALSE]
 regions = cbind(regions[[2]] + 1, regions[[3]])
 
 #import read data
-if (cornum > 1) {
-	datain = mclapply(readsFiles, parsein, mc.cores = cornum, mc.preschedule = TRUE) #read in all bed files (samples and control)
-} else {
-	datain = lapply(readsFiles, parsein) #read in all bed files (samples and control)
+if (type == "single") {
+	if (cornum > 1) {
+		datain = mclapply(readsFiles, parsein, mc.cores = cornum, mc.preschedule = TRUE) #read in all bed files (samples and control)
+	} else {
+		datain = lapply(readsFiles, parsein) #read in all bed files (samples and control)
+	}
+}
+#import read data
+if (type == "paired") {
+	if (cornum > 1) {
+		datain = mclapply(readsFiles, parseinpe, mc.cores = cornum, mc.preschedule = TRUE) #read in all bed files (samples and control)
+	} else {
+		datain = lapply(readsFiles, parseinpe) #read in all bed files (samples and control)
+	}
 }
 #=======================> DONE!
 
@@ -290,10 +355,20 @@ if (cornum > 1) {
 # =============== 
 # Counting Reads
 # ===============
-if (cornum > 1) {
-	counts = mclapply(readsFiles, countreads, reads = datain, frag = frags, chromsize = chromSize, filelist = readsFiles, mc.cores = cornum, mc.preschedule = TRUE)
-} else {
-	counts = lapply(readsFiles, countreads, reads = datain, frag = frags, chromsize = chromSize, filelist = readsFiles)
+if (type == "single") {
+	if (cornum > 1) {
+		counts = mclapply(readsFiles, countreads, reads = datain, frag = frags, chromsize = chromSize, filelist = readsFiles, chrcount = chrcount, mc.cores = cornum, mc.preschedule = TRUE)
+	} else {
+		counts = lapply(readsFiles, countreads, reads = datain, frag = frags, chromsize = chromSize, filelist = readsFiles, chrcount = chrcount)
+	}
+}
+
+if (type == "paired") {
+	if (cornum > 1) {
+		counts = mclapply(readsFiles, countreadspe, reads = datain, chromsize = chromSize, filelist = readsFiles, chrcount = chrcount, mc.cores = cornum, mc.preschedule = TRUE)
+	} else {
+		counts = lapply(readsFiles, countreadspe, reads = datain, chromsize = chromSize, filelist = readsFiles, chrcount = chrcount)
+	}
 }
 rm(datain)
 #=======================> DONE!
