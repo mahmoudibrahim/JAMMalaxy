@@ -1,6 +1,8 @@
 JAMM: a peak finder for joint analysis of NGS replicates
 ====
 
+*JAMMalaxy* is a Galaxy wrapper for JAMM.
+
 JAMM (Joint Analysis of NGS replicates via Mixture Model clustering): 
 a peak finder that can integrate information from biological replicates, 
 determine enrichment site widths accurately and resolve neighboring narrow peaks. 
