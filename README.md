@@ -8,7 +8,7 @@ a peak finder that can integrate information from biological replicates,
 determine enrichment site widths accurately and resolve neighboring narrow peaks. 
 JAMM is a universal peak finder that is applicable to different types of datasets
 
-This is a wrapper for JAMM for use in Galaxy (usegalaxy.org)
+This Galaxy wrapper was developed by [Clemens Messerschmidt](https://github.com/messersc)
 
 JAMM Publication: http://bioinformatics.oxfordjournals.org/content/31/1/48
 
